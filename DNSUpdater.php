@@ -2,7 +2,8 @@
 
 namespace DNSUpdater;
 
-class Dyndns {
+class Dyndns
+{
 
     /*
      * Define basic settings
@@ -28,22 +29,23 @@ class Dyndns {
      * Authenticate user, if success;
      * update the DNS entry
      */
-    public function __construct() {
-        if (!isset($_SERVER['PHP_AUTH_USER']) && !isset($_SERVER['PHP_AUTH_PW'])){
+    public function __construct()
+    {
+        if (!isset($_SERVER['PHP_AUTH_USER']) && !isset($_SERVER['PHP_AUTH_PW'])) {
             header('WWW-Authenticate: Basic realm="please check yoself"');
             header('HTTP/1.0 401 Unauthorized');
             echo 'No.';
             die();
         }
         $user = filter_var($_SERVER['PHP_AUTH_USER'], FILTER_SANITIZE_STRING);  // Rule number 1:
-        $token = filter_var($_SERVER['PHP_AUTH_PW'],   FILTER_SANITIZE_STRING);    // Every input is hostile
+        $token = filter_var($_SERVER['PHP_AUTH_PW'], FILTER_SANITIZE_STRING);   // Every input is hostile
         // Development values
         #$user = $this->auth['user'];
         #$token = $this->auth['token'];
 
         $auth = $this->authenticate($user, $token);
         if ($auth) {
-            if($_SERVER['REMOTE_ADDR'] === '127.0.0.1') {
+            if ($_SERVER['REMOTE_ADDR'] === '127.0.0.1') {
                 $this->curl = \curl_init();
                 $curlOpts = array(CURLOPT_RETURNTRANSFER => true);
                 curl_setopt_array($this->curl, $curlOpts);
@@ -68,7 +70,8 @@ class Dyndns {
      * @param string $token
      * @return bool
      */
-    protected function authenticate($user, $token) {
+    protected function authenticate($user, $token)
+    {
         if ($user !== $this->auth['user'] && $token !== $this->auth['token']) {
             return false;
         } else {
@@ -84,7 +87,8 @@ class Dyndns {
      * @param string $ipAddr - New IP address
      * @return string $result - Result from cPanel, should match $ipAddr
      */
-    protected function updateEntry($ipAddr) {
+    protected function updateEntry($ipAddr)
+    {
 
         // Define options to send to cPanel
         $params = array(
@@ -108,7 +112,6 @@ class Dyndns {
         // If the current record is the current IP,
         // we don't have to update anything
         if ($record['address'] !== $ipAddr) {
-
             // Define options to send to cPanel
             $updateParams = array(
                 'cpanel_jsonapi_module' => 'ZoneEdit',
@@ -132,16 +135,19 @@ class Dyndns {
      * @param array $params 
      * @return array $result
      */
-    protected function callCpanel($params) {
+    protected function callCpanel($params)
+    {
         $this->curl = \curl_init();
         $curlOpts = array(
-            CURLOPT_HTTPHEADER => array( 'Authorization: Basic ' . base64_encode($this->cpanelConfig['user'] . ':' . $this->cpanelConfig['pass'])),
+            CURLOPT_HTTPHEADER => array(
+                'Authorization: Basic '. base64_encode($this->cpanelConfig['user'] .':'. $this->cpanelConfig['pass'])
+            ),
             CURLOPT_SSL_VERIFYPEER => false, // Self signed / expired certs
             CURLOPT_SSL_VERIFYHOST => false, // Certs not matching the hostname
+            CURLOPT_URL => $this->cpanelConfig['url'] .'/json-api/cpanel?'. http_build_query($params),
             CURLOPT_RETURNTRANSFER => true,  // Return contents
         );
         curl_setopt_array($this->curl, $curlOpts);
-        curl_setopt($this->curl, CURLOPT_URL, $this->cpanelConfig['url'] . '/json-api/cpanel?' . http_build_query($params));
 
         // Get the result and close connection
         $result = curl_exec($this->curl);
